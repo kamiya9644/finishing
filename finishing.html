@@ -62,11 +62,19 @@
 </div>
 
 <script>
+    // 【設定】MakeのWebhook URLとLIFF IDをここに入れてください
     const WEBHOOK_URL = "https://hook.eu1.make.com/y1ftmbyywjwv42jy2nywbzkk6lwtoj48";
+    const LIFF_ID = "2008921793-Cqso2j0A";
 
-    // LIFF初期化
     async function initLIFF() {
-        await liff.init({ liffId: "2008921793-Cqso2j0A" });
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            }
+        } catch (error) {
+            console.error("LIFF初期化失敗", error);
+        }
     }
     initLIFF();
 
@@ -75,28 +83,37 @@
         const carID = document.getElementById('car-id-search').value;
         if (!carID) return alert("車両IDを入力してください");
 
-        // Makeに検索リクエストを送信
-        const response = await fetch(WEBHOOK_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'search', carID: carID })
-        });
-        const data = await response.json();
+        try {
+            const response = await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, // これが重要！
+                body: JSON.stringify({ action: 'search', carID: carID })
+            });
 
-        document.getElementById('search-section').classList.add('hidden');
-        document.getElementById('form-section').classList.remove('hidden');
-        document.getElementById('car-id').value = carID;
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
 
-        if (data.exists) {
-            document.getElementById('status-message').innerText = "登録済みのデータが見つかりました。変更・キャンセルが可能です。";
-            document.getElementById('store-name').value = data.storeName;
-            document.getElementById('work-date').value = data.workDate;
-            document.getElementById('car-model').value = data.carModel;
-            document.getElementById('dr-bazooka').checked = data.drBazooka;
-            document.getElementById('coating').checked = data.coating;
-            document.getElementById('delete-btn').classList.remove('hidden');
-            document.getElementById('submit-btn').innerText = "内容を変更する";
-        } else {
-            document.getElementById('status-message').innerText = "新規の申請です。";
+            document.getElementById('search-section').classList.add('hidden');
+            document.getElementById('form-section').classList.remove('hidden');
+            document.getElementById('car-id').value = carID;
+
+            if (data.exists) {
+                document.getElementById('status-message').innerText = "登録済みのデータが見つかりました。";
+                document.getElementById('store-name').value = data.storeName;
+                document.getElementById('work-date').value = data.workDate;
+                document.getElementById('car-model').value = data.carModel;
+                document.getElementById('dr-bazooka').checked = data.drBazooka;
+                document.getElementById('coating').checked = data.coating;
+                document.getElementById('delete-btn').classList.remove('hidden');
+                document.getElementById('submit-btn').innerText = "内容を変更する";
+            } else {
+                document.getElementById('status-message').innerText = "新規の申請です。";
+                document.getElementById('delete-btn').classList.add('hidden');
+                document.getElementById('submit-btn').innerText = "新規申請する";
+            }
+        } catch (error) {
+            alert("検索に失敗しました。Makeのシナリオが正しく起動しているか確認してください。");
+            console.error(error);
         }
     }
 
@@ -112,16 +129,24 @@
             coating: document.getElementById('coating').checked
         };
 
-        const response = await fetch(WEBHOOK_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        if (type === 'cancel' && !confirm("本当にこの予約をキャンセルしますか？")) return;
 
-        if (response.ok) {
-            alert("処理が完了しました");
-            liff.closeWindow();
-        } else {
+        try {
+            const response = await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, // これが重要！
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert("処理が完了しました");
+                liff.closeWindow();
+            } else {
+                alert("送信に失敗しました");
+            }
+        } catch (error) {
             alert("エラーが発生しました");
+            console.error(error);
         }
     }
 </script>
