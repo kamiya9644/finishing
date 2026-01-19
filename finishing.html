@@ -80,6 +80,10 @@
 
     // 車両ID検索（Makeへ問い合わせ）
     async function searchCarID() {
+const data = await response.json();
+        console.log("Makeから届いたデータ:", data); // これを追加！
+        alert("届いたデータ: " + JSON.stringify(data)); // これも追加して画面で確認しましょう
+
         const carID = document.getElementById('car-id-search').value;
         if (!carID) return alert("車両IDを入力してください");
 
