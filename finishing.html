@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仕上げ作業申請システム</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        label { display: block; margin-top: 15px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; }
+        .checkbox-group { margin-top: 15px; }
+        .checkbox-group label { display: inline; font-weight: normal; }
+        button { width: 100%; padding: 12px; background: #00b900; color: white; border: none; border-radius: 4px; margin-top: 20px; cursor: pointer; }
+        button.secondary { background: #666; }
+        button.danger { background: #ff4d4d; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>車両仕上げ申請</h2>
+
+    <div id="search-section">
+        <label for="car-id-search">車両IDを入力してください</label>
+        <input type="text" id="car-id-search" placeholder="例：ABC-1234">
+        <button onclick="searchCarID()">進む</button>
+    </div>
+
+    <div id="form-section" class="hidden">
+        <p id="status-message" style="color: blue; font-weight: bold;"></p>
+        
+        <label>車両ID</label>
+        <input type="text" id="car-id" readonly>
+
+        <label>店舗名</label>
+        <select id="store-name">
+            <option value="GS-春日井">GS-春日井</option>
+            <option value="GS-知立">GS-知立</option>
+            <option value="GS-大垣">GS-大垣</option>
+            <option value="GS-小牧">GS-小牧</option>
+            <option value="GS-名東">GS-名東</option>
+        </select>
+
+        <label>作業期日</label>
+        <input type="date" id="work-date">
+
+        <label>車種</label>
+        <input type="text" id="car-model" placeholder="例：プリウス">
+
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="dr-bazooka"> Drバズーカ</label><br>
+            <label><input type="checkbox" id="coating"> コーティング</label>
+        </div>
+
+        <button id="submit-btn" onclick="submitData('save')">申請する</button>
+        <button id="delete-btn" class="hidden danger" onclick="submitData('cancel')">この予約をキャンセルする</button>
+        <button class="secondary" onclick="location.reload()">戻る</button>
+    </div>
+</div>
+
+<script>
+    const WEBHOOK_URL = "ここにMakeで発行したWebhookURLを貼る";
+
+    // LIFF初期化
+    async function initLIFF() {
+        await liff.init({ liffId: "あなたのLIFF_ID" });
+    }
+    initLIFF();
+
+    // 車両ID検索（Makeへ問い合わせ）
+    async function searchCarID() {
+        const carID = document.getElementById('car-id-search').value;
+        if (!carID) return alert("車両IDを入力してください");
+
+        // Makeに検索リクエストを送信
+        const response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'search', carID: carID })
+        });
+        const data = await response.json();
+
+        document.getElementById('search-section').classList.add('hidden');
+        document.getElementById('form-section').classList.remove('hidden');
+        document.getElementById('car-id').value = carID;
+
+        if (data.exists) {
+            document.getElementById('status-message').innerText = "登録済みのデータが見つかりました。変更・キャンセルが可能です。";
+            document.getElementById('store-name').value = data.storeName;
+            document.getElementById('work-date').value = data.workDate;
+            document.getElementById('car-model').value = data.carModel;
+            document.getElementById('dr-bazooka').checked = data.drBazooka;
+            document.getElementById('coating').checked = data.coating;
+            document.getElementById('delete-btn').classList.remove('hidden');
+            document.getElementById('submit-btn').innerText = "内容を変更する";
+        } else {
+            document.getElementById('status-message').innerText = "新規の申請です。";
+        }
+    }
+
+    // データ送信（新規・更新・キャンセル）
+    async function submitData(type) {
+        const payload = {
+            action: type === 'cancel' ? 'cancel' : 'save',
+            carID: document.getElementById('car-id').value,
+            storeName: document.getElementById('store-name').value,
+            workDate: document.getElementById('work-date').value,
+            carModel: document.getElementById('car-model').value,
+            drBazooka: document.getElementById('dr-bazooka').checked,
+            coating: document.getElementById('coating').checked
+        };
+
+        const response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert("処理が完了しました");
+            liff.closeWindow();
+        } else {
+            alert("エラーが発生しました");
+        }
+    }
+</script>
+</body>
+</html>
