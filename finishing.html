@@ -97,21 +97,34 @@
             document.getElementById('form-section').classList.remove('hidden');
             document.getElementById('car-id').value = carID;
 
-            if (data.exists) {
+           
+            if (data.exists === true || data.exists === "true") {
                 document.getElementById('status-message').innerText = "登録済みのデータが見つかりました。";
-                document.getElementById('store-name').value = data.storeName;
-                document.getElementById('work-date').value = data.workDate;
-                document.getElementById('car-model').value = data.carModel;
-                document.getElementById('dr-bazooka').checked = data.drBazooka;
-                document.getElementById('coating').checked = data.coating;
+                document.getElementById('status-message').style.color = "blue";
+                
+                document.getElementById('store-name').value = data.storeName || "";
+                document.getElementById('work-date').value = data.workDate || "";
+                document.getElementById('car-model').value = data.carModel || "";
+                document.getElementById('dr-bazooka').checked = data.drBazooka === true || data.drBazooka === "true";
+                document.getElementById('coating').checked = data.coating === true || data.coating === "true";
+                
                 document.getElementById('delete-btn').classList.remove('hidden');
                 document.getElementById('submit-btn').innerText = "内容を変更する";
             } else {
+                // 新規の場合：念のため各入力項目を空にする
                 document.getElementById('status-message').innerText = "新規の申請です。";
+                document.getElementById('status-message').style.color = "red";
+                
+                document.getElementById('store-name').selectedIndex = 0; // 最初の店舗を選択
+                document.getElementById('work-date').value = "";
+                document.getElementById('car-model').value = "";
+                document.getElementById('dr-bazooka').checked = false;
+                document.getElementById('coating').checked = false;
+                
                 document.getElementById('delete-btn').classList.add('hidden');
                 document.getElementById('submit-btn').innerText = "新規申請する";
             }
-        } catch (error) {
+                  } catch (error) {
             alert("検索に失敗しました。Makeのシナリオが正しく起動しているか確認してください。");
             console.error(error);
         }
