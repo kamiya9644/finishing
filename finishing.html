@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仕上げ作業申請システム</title>
+    <title>車両仕上げ申請システム</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
@@ -16,6 +16,7 @@
         button { width: 100%; padding: 12px; background: #00b900; color: white; border: none; border-radius: 4px; margin-top: 20px; cursor: pointer; }
         button.secondary { background: #666; }
         button.danger { background: #ff4d4d; }
+        #status-message { font-size: 0.9em; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -30,10 +31,10 @@
     </div>
 
     <div id="form-section" class="hidden">
-        <p id="status-message" style="color: blue; font-weight: bold;"></p>
+        <p id="status-message"></p>
         
         <label>車両ID</label>
-        <input type="text" id="car-id" readonly>
+        <input type="text" id="car-id" readonly style="background-color: #eee;">
 
         <label>店舗名</label>
         <select id="store-name">
@@ -57,14 +58,15 @@
 
         <button id="submit-btn" onclick="submitData('save')">申請する</button>
         <button id="delete-btn" class="hidden danger" onclick="submitData('cancel')">この予約をキャンセルする</button>
-        <button class="secondary" onclick="location.reload()">戻る</button>
+        <button class="secondary" onclick="location.reload()">車両ID入力に戻る</button>
     </div>
 </div>
 
 <script>
-    // 【設定】MakeのWebhook URLとLIFF IDをここに入れてください
+    // --- 【重要】ここを書き換えてください ---
     const WEBHOOK_URL = "https://hook.eu1.make.com/y1ftmbyywjwv42jy2nywbzkk6lwtoj48";
     const LIFF_ID = "2008921793-Cqso2j0A";
+    // ---------------------------------------
 
     async function initLIFF() {
         try {
@@ -80,56 +82,60 @@
 
     // 車両ID検索（Makeへ問い合わせ）
     async function searchCarID() {
-const data = await response.json();
-        console.log("Makeから届いたデータ:", data); // これを追加！
-        alert("届いたデータ: " + JSON.stringify(data)); // これも追加して画面で確認しましょう
-
-        const carID = document.getElementById('car-id-search').value;
-        if (!carID) return alert("車両IDを入力してください");
+        const carIDSearch = document.getElementById('car-id-search').value.trim();
+        if (!carIDSearch) return alert("車両IDを入力してください");
 
         try {
             const response = await fetch(WEBHOOK_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // これが重要！
-                body: JSON.stringify({ action: 'search', carID: carID })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'search', carID: carIDSearch })
             });
 
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error('通信エラーが発生しました');
             const data = await response.json();
+            
+            // デバッグ用（あとで消してもOK）
+            console.log("受信データ:", data);
 
+            // 画面の切り替え
             document.getElementById('search-section').classList.add('hidden');
             document.getElementById('form-section').classList.remove('hidden');
-            document.getElementById('car-id').value = carID;
+            document.getElementById('car-id').value = carIDSearch;
 
-           
-            if (data.exists === true || data.exists === "true") {
-                document.getElementById('status-message').innerText = "登録済みのデータが見つかりました。";
+            // --- 登録済みかどうかの判定（文字列でも論理値でも対応） ---
+            const exists = (data.exists === true || data.exists === "true");
+
+            if (exists) {
+                // 【登録済みの場合】
+                document.getElementById('status-message').innerText = "● 登録済みのデータが見つかりました。";
                 document.getElementById('status-message').style.color = "blue";
                 
                 document.getElementById('store-name').value = data.storeName || "";
                 document.getElementById('work-date').value = data.workDate || "";
                 document.getElementById('car-model').value = data.carModel || "";
-                document.getElementById('dr-bazooka').checked = data.drBazooka === true || data.drBazooka === "true";
-                document.getElementById('coating').checked = data.coating === true || data.coating === "true";
+                document.getElementById('dr-bazooka').checked = (data.drBazooka === true || data.drBazooka === "true");
+                document.getElementById('coating').checked = (data.coating === true || data.coating === "true");
                 
                 document.getElementById('delete-btn').classList.remove('hidden');
                 document.getElementById('submit-btn').innerText = "内容を変更する";
             } else {
-                // 新規の場合：念のため各入力項目を空にする
-                document.getElementById('status-message').innerText = "新規の申請です。";
+                // 【新規の場合】
+                document.getElementById('status-message').innerText = "● 新規の申請です。項目を入力してください。";
                 document.getElementById('status-message').style.color = "red";
                 
-                document.getElementById('store-name').selectedIndex = 0; // 最初の店舗を選択
+                // 既存のデータをリセット
+                document.getElementById('store-name').selectedIndex = 0;
                 document.getElementById('work-date').value = "";
                 document.getElementById('car-model').value = "";
                 document.getElementById('dr-bazooka').checked = false;
                 document.getElementById('coating').checked = false;
                 
                 document.getElementById('delete-btn').classList.add('hidden');
-                document.getElementById('submit-btn').innerText = "新規申請する";
+                document.getElementById('submit-btn').innerText = "新規登録する";
             }
-                  } catch (error) {
-            alert("検索に失敗しました。Makeのシナリオが正しく起動しているか確認してください。");
+        } catch (error) {
+            alert("エラー: " + error.message);
             console.error(error);
         }
     }
@@ -151,7 +157,7 @@ const data = await response.json();
         try {
             const response = await fetch(WEBHOOK_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // これが重要！
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
@@ -162,8 +168,7 @@ const data = await response.json();
                 alert("送信に失敗しました");
             }
         } catch (error) {
-            alert("エラーが発生しました");
-            console.error(error);
+            alert("通信エラーが発生しました");
         }
     }
 </script>
