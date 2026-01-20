@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>作業申請システム</title>
+    <title>作業受付システム</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; line-height: 1.6; }
@@ -23,7 +23,7 @@
 <body>
 
 <div class="card">
-    <h2 style="text-align:center; margin-top:0;">車両仕上げ申請</h2>
+    <h2 style="text-align:center; margin-top:0;">車両受付申請</h2>
 
     <div id="search-section">
         <label for="car-id-search">車両IDを入力して進んでください</label>
@@ -101,7 +101,7 @@
 
             if (isRegistered) {
                 // 登録済み（既存データあり）
-                msgArea.innerText = "【登録済み】過去の申請内容を表示しています。";
+                msgArea.innerText = "【登録済み】過去の受付内容を表示しています。";
                 msgArea.style.backgroundColor = "#e7f3ff";
                 msgArea.style.color = "#0056b3";
 
